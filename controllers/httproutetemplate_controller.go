@@ -63,7 +63,7 @@ func (r *HTTPRouteTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, nil
 		}
 
-		log.Error(err, "unable to fetch IngressTemplate")
+		log.Error(err, "unable to fetch HTTPRouteTemplate")
 		return ctrl.Result{}, err
 	}
 
@@ -74,7 +74,7 @@ func (r *HTTPRouteTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, nil
 	}
 
-	log.Info("run create or update Ingress")
+	log.Info("run create or update HTTPRoute")
 
 	httpRoute, err := httpRouteTemplateToHTTPRoute(httpRouteTemplate)
 	if err != nil {
@@ -111,11 +111,11 @@ func (r *HTTPRouteTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	} else {
 		needUpdate := false
 		if !reflect.DeepEqual(createdHTTPRoute.ObjectMeta.Labels, httpRouteTemplate.ObjectMeta.Labels) {
-			log.Info(fmt.Sprintf("detects changes ObjectMeta.Label: %+v, %+v", createdHTTPRoute.ObjectMeta.Labels, ingress.ObjectMeta.Labels))
+			log.Info(fmt.Sprintf("detects changes ObjectMeta.Label: %+v, %+v", createdHTTPRoute.ObjectMeta.Labels, httpRouteTemplate.ObjectMeta.Labels))
 			needUpdate = true
 		}
 		if !reflect.DeepEqual(createdHTTPRoute.ObjectMeta.Annotations, httpRouteTemplate.ObjectMeta.Annotations) {
-			log.Info(fmt.Sprintf("detects changes ObjectMeta.Annotations: %+v, %+v", createdHTTPRoute.ObjectMeta.Annotations, ingress.ObjectMeta.Annotations))
+			log.Info(fmt.Sprintf("detects changes ObjectMeta.Annotations: %+v, %+v", createdHTTPRoute.ObjectMeta.Annotations, httpRouteTemplate.ObjectMeta.Annotations))
 			needUpdate = true
 		}
 		if !reflect.DeepEqual(createdHTTPRoute.Spec, httpRouteTemplate.Spec) {
