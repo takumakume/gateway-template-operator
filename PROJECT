@@ -3,4 +3,14 @@ layout:
 - go.kubebuilder.io/v4-alpha
 projectName: gateway-template-operator
 repo: github.com/takumakume/gateway-template-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: takumakume.github.io
+  group: gateway-template
+  kind: HTTPRouteTemplate
+  path: github.com/takumakume/gateway-template-operator/api/v1alpha1
+  version: v1alpha1
 version: "3"

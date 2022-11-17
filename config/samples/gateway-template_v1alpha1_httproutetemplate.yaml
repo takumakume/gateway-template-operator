@@ -1,0 +1,12 @@
+apiVersion: gateway-template.takumakume.github.io/v1alpha1
+kind: HTTPRouteTemplate
+metadata:
+  labels:
+    app.kubernetes.io/name: httproutetemplate
+    app.kubernetes.io/instance: httproutetemplate-sample
+    app.kubernetes.io/part-of: gateway-template-operator
+    app.kuberentes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: gateway-template-operator
+  name: httproutetemplate-sample
+spec:
+  # TODO(user): Add fields here

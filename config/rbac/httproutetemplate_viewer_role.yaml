@@ -1,0 +1,27 @@
+# permissions for end users to view httproutetemplates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: httproutetemplate-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: gateway-template-operator
+    app.kubernetes.io/part-of: gateway-template-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: httproutetemplate-viewer-role
+rules:
+- apiGroups:
+  - gateway-template.takumakume.github.io
+  resources:
+  - httproutetemplates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway-template.takumakume.github.io
+  resources:
+  - httproutetemplates/status
+  verbs:
+  - get
