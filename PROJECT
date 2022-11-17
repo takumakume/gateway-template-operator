@@ -1,0 +1,6 @@
+domain: takumakume.github.io
+layout:
+- go.kubebuilder.io/v4-alpha
+projectName: gateway-template-operator
+repo: github.com/takumakume/gateway-template-operator
+version: "3"
