@@ -18,13 +18,21 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	gatewaytemplatev1alpha1 "github.com/takumakume/gateway-template-operator/api/v1alpha1"
+	gatewayv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // HTTPRouteTemplateReconciler reconciles a HTTPRouteTemplate object
@@ -47,11 +55,93 @@ type HTTPRouteTemplateReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
 func (r *HTTPRouteTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx).WithValues("HTTPRouteTemplate", req.NamespacedName.String())
 
-	// TODO(user): your logic here
+	httpRouteTemplate := &gatewaytemplatev1alpha1.HTTPRouteTemplate{}
+	if err := r.Get(ctx, req.NamespacedName, httpRouteTemplate); err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+
+		log.Error(err, "unable to fetch IngressTemplate")
+		return ctrl.Result{}, err
+	}
+
+	log.Info("starting reconcile loop")
+	defer log.Info("finish reconcile loop")
+
+	if !httpRouteTemplate.GetDeletionTimestamp().IsZero() {
+		return ctrl.Result{}, nil
+	}
+
+	log.Info("run create or update Ingress")
+
+	httpRoute, err := httpRouteTemplateToHTTPRoute(httpRouteTemplate)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	ownerRef := metav1.NewControllerRef(
+		&httpRoute.ObjectMeta,
+		schema.GroupVersionKind{
+			Group:   gatewaytemplatev1alpha1.GroupVersion.Group,
+			Version: gatewaytemplatev1alpha1.GroupVersion.Version,
+			Kind:    "HTTPRouteTemplate",
+		})
+	ownerRef.Name = httpRouteTemplate.Name
+	ownerRef.UID = httpRouteTemplate.GetUID()
+	httpRoute.ObjectMeta.SetOwnerReferences([]metav1.OwnerReference{*ownerRef})
+
+	createdHTTPRoute := &gatewayv1b1.HTTPRoute{}
+	if err := r.Get(ctx, req.NamespacedName, createdHTTPRoute); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("run create Ingress")
+			if createErr := r.Create(ctx, httpRoute); createErr != nil {
+				return ctrl.Result{}, createErr
+			}
+			log.Info("create HTTPRoute successful")
+
+			httpRouteTemplate.Status.Ready = corev1.ConditionTrue
+			if statusUpdateErr := r.Status().Update(ctx, httpRouteTemplate); statusUpdateErr != nil {
+				return ctrl.Result{}, statusUpdateErr
+			}
+		}
+
+		log.Error(err, "unable to fetch HTTPRoute")
+		return ctrl.Result{}, err
+	} else {
+		needUpdate := false
+		if !reflect.DeepEqual(createdHTTPRoute.ObjectMeta.Labels, httpRouteTemplate.ObjectMeta.Labels) {
+			log.Info(fmt.Sprintf("detects changes ObjectMeta.Label: %+v, %+v", createdHTTPRoute.ObjectMeta.Labels, ingress.ObjectMeta.Labels))
+			needUpdate = true
+		}
+		if !reflect.DeepEqual(createdHTTPRoute.ObjectMeta.Annotations, httpRouteTemplate.ObjectMeta.Annotations) {
+			log.Info(fmt.Sprintf("detects changes ObjectMeta.Annotations: %+v, %+v", createdHTTPRoute.ObjectMeta.Annotations, ingress.ObjectMeta.Annotations))
+			needUpdate = true
+		}
+		if !reflect.DeepEqual(createdHTTPRoute.Spec, httpRouteTemplate.Spec) {
+			log.Info(fmt.Sprintf("detects changes Spec: %+v, %+v", createdHTTPRoute.Spec, httpRouteTemplate.Spec))
+			needUpdate = true
+		}
+
+		if needUpdate {
+			log.Info("run update HTTPRoute")
+			if err := r.Update(ctx, httpRouteTemplate); err != nil {
+				return ctrl.Result{}, err
+			}
+			log.Info("update HTTPRoute successful")
+		}
+	}
+
+	if err != nil {
+		log.Error(err, "unable to create or update HTTPRoute")
+		if statusUpdateErr := r.Update(ctx, httpRouteTemplate); statusUpdateErr != nil {
+			return ctrl.Result{}, statusUpdateErr
+		}
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
+
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -59,4 +149,10 @@ func (r *HTTPRouteTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&gatewaytemplatev1alpha1.HTTPRouteTemplate{}).
 		Complete(r)
+}
+
+func httpRouteTemplateToHTTPRoute(httpRouteTemplate *gatewaytemplatev1alpha1.HTTPRouteTemplate) (*gatewayv1b1.HTTPRoute, error) {
+	generated := &gatewayv1b1.HTTPRoute{}
+	// TODO
+	return generated, nil
 }
