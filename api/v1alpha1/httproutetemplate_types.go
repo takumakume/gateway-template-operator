@@ -17,7 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gatewayv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -25,17 +27,23 @@ import (
 
 // HTTPRouteTemplateSpec defines the desired state of HTTPRouteTemplate
 type HTTPRouteTemplateSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// HTTPRouteSpec Template for HTTPRoute.Spec
+	// +kubebuilder:validation:Required
+	HTTPRouteSpecTemplate gatewayv1b1.HTTPRouteSpec `json:"httpRouteSpecTemplate"`
 
-	// Foo is an example field of HTTPRouteTemplate. Edit httproutetemplate_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Annotations This annotation is generated in HTTPRoute
+	// +optional
+	HTTPRouteAnnotations map[string]string `json:"httpRouteAnnotations,omitempty"`
+
+	// Labels This labels is generated in HTTPRoute
+	// +optional
+	HTTPRouteLabels map[string]string `json:"httpRouteLabels,omitempty"`
 }
 
 // HTTPRouteTemplateStatus defines the observed state of HTTPRouteTemplate
 type HTTPRouteTemplateStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Ready HTTPRoute generation status
+	Ready corev1.ConditionStatus `json:"ready,omitempty"`
 }
 
 //+kubebuilder:object:root=true
