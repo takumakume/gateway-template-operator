@@ -32,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gatewaytemplatev1alpha1 "github.com/takumakume/gateway-template-operator/api/v1alpha1"
+	"github.com/takumakume/gateway-template-operator/pkg/render"
 	gatewayv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -152,7 +153,30 @@ func (r *HTTPRouteTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func httpRouteTemplateToHTTPRoute(httpRouteTemplate *gatewaytemplatev1alpha1.HTTPRouteTemplate) (*gatewayv1b1.HTTPRoute, error) {
-	generated := &gatewayv1b1.HTTPRoute{}
-	// TODO
+	generated := &gatewayv1b1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        httpRouteTemplate.Name,
+			Namespace:   httpRouteTemplate.Namespace,
+			Annotations: httpRouteTemplate.Spec.HTTPRouteAnnotations,
+			Labels:      httpRouteTemplate.Spec.HTTPRouteLabels,
+		},
+		Spec: httpRouteTemplate.Spec.HTTPRouteSpecTemplate,
+	}
+
+	r := render.NewRender(render.Options{
+		Metadata: generated.ObjectMeta,
+	})
+
+	if len(generated.Spec.Hostnames) > 0 {
+		for i, o := range generated.Spec.Hostnames {
+			s := string(o)
+			if ret, err := r.Render(s); err == nil {
+				generated.Spec.Hostnames[i] = gatewayv1b1.Hostname(ret)
+			} else {
+				return nil, err
+			}
+		}
+	}
+
 	return generated, nil
 }
